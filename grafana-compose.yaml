@@ -1,0 +1,21 @@
+version: "3.9"
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    volumes: 
+      - ./grafana/provisioning/datasources/:/etc/grafana/provisioning/datasources/
+      - ./grafana/provisioning/dashboards/:/etc/grafana/provisioning/dashboards/
+      - ./grafana/dashboards/:/etc/dashboards/
+    network_mode: host
+
+  prometheus:
+    image: prom/prometheus:v2.5.0
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+    network_mode: host
+
+volumes:
+  prometheus-data:

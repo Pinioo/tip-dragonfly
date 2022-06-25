@@ -1,0 +1,20 @@
+FROM ubuntu:trusty
+  
+RUN apt update
+RUN apt install -y \
+    redis-server \
+    build-essential \
+    autoconf automake \
+    libpcre3-dev \
+    libevent-dev \
+    pkg-config \
+    zlib1g-dev \
+    git \
+    libssl-dev
+RUN git clone https://github.com/RedisLabs/memtier_benchmark.git && \
+    cd memtier_benchmark && \
+    autoreconf -ivf && \
+    ./configure && \ 
+    make && make install
+
+CMD /bin/bash
