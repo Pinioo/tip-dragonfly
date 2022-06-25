@@ -1,7 +1,7 @@
 # Run instruction
 - Configure resources in `config.json`
 - Run container with `./run_containernet.sh`
-- Inside container run `cd project && python3 ./containernet.py`
+- Inside container run `python3 -m pip install pandas && cd project && python3 ./containernet.py`
 - After benchmarks, results are available in `results.csv` file
 
 WARNING: If mininet deployment is stuck on creating switch, you probably need to install `openvswitch-switch`
