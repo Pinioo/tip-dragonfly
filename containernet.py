@@ -9,10 +9,6 @@ import io
 
 from collections import defaultdict
 
-
-db_ip = '10.0.0.251' 
-json_filename = "results.json"
-
 def start_mininet(cpu, memory):
     cpu_period = 100000
     cpu_quota = int(cpu * cpu_period)
@@ -25,7 +21,7 @@ def start_mininet(cpu, memory):
 
     db1 = net.addDocker(
         'db1',
-        ip=db_ip,
+        ip="10.0.0.251",
         dimage="dragonflydb",
         ports=[6379],
         port_bindings={6379:6379},
@@ -55,16 +51,14 @@ final_dict = defaultdict(lambda: [])
 for cpu in config['cpu']:
     for memory in config['memory']:
         net, h1, db1 = start_mininet(cpu, memory)
+        print("==========================")
         print("TEST SUITE:")
         print(f"\tCPU: {cpu}")
         print(f"\tMemory: {memory}MB")
-        print("Running redis-benchmark...")
-        rb_csv = h1.cmd(f"redis-benchmark -h {db_ip} --csv")
-        print("END")
-        print("Running memtier_benchmark...")
-        h1.cmd(f"memtier_benchmark -s {db_ip} --json-out-file={json_filename}")
-        memtier_json = h1.cmd(f"cat {json_filename}")
-        print("END")
+        print("==========================")
+        CLI(net, script="./bench_scripts/redis.sh")
+        rb_csv = h1.cmd(f"cat rb.csv")
+        memtier_json = h1.cmd(f"cat mt.json")
         redis_res = pandas.read_csv(io.StringIO(rb_csv), index_col=0, header=None).T.to_dict('list')
         data = json.loads(memtier_json)
         data = {
