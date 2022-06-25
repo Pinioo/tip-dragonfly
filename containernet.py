@@ -6,6 +6,7 @@ from mininet.clean import cleanup
 import pandas
 import json
 import io
+import itertools
 
 from collections import defaultdict
 
@@ -48,35 +49,36 @@ with open("config.json") as conf:
     config = json.load(conf)
 final_dict = defaultdict(lambda: [])
 
-for cpu in config['cpu']:
-    for memory in config['memory']:
-        net, h1, db1 = start_mininet(cpu, memory)
-        print("==========================")
-        print("TEST SUITE:")
-        print(f"\tCPU: {cpu}")
-        print(f"\tMemory: {memory}MB")
-        print("==========================")
-        CLI(net, script="./bench_scripts/redis.sh")
-        rb_csv = h1.cmd(f"cat rb.csv")
-        memtier_json = h1.cmd(f"cat mt.json")
-        redis_res = pandas.read_csv(io.StringIO(rb_csv), index_col=0, header=None).T.to_dict('list')
-        data = json.loads(memtier_json)
-        data = {
-            'CPU': [cpu],
-            'Memory limit [MB]': [memory],
-            'Requests per client': [data["run information"]["Requests per client"]],
-            'Total duration': [data["ALL STATS"]["Runtime"]["Total duration"]],
-            'Start time': [data["ALL STATS"]["Runtime"]["Start time"]],
-            'Ops/sec': [data["ALL STATS"]["Sets"]["Ops/sec"]],
-            'Average Latency': [data["ALL STATS"]["Sets"]["Average Latency"]],
-            'Min Latency': [data["ALL STATS"]["Sets"]["Min Latency"]],
-            'Max Latency': [data["ALL STATS"]["Sets"]["Max Latency"]],
-            'KB/sec': [data["ALL STATS"]["Sets"]["KB/sec"]],
-            **redis_res
-        }
-        for k, v in data.items():
-            final_dict[k].append(v[0])
-        net.stop()
+for cpu, memory in itertools.product(config['cpu'], config['memory']):
+    net, h1, db1 = start_mininet(cpu, memory)
+    print("==========================")
+    print("TEST SUITE:")
+    print(f"\tCPU: {cpu}")
+    print(f"\tMemory: {memory}MB")
+    print("==========================")
+    
+    # Crazy hax to run command through CLI since h1.cmd caused some time related problems
+    CLI(net, script="./bench_scripts/redis.sh")
+    rb_csv = h1.cmd(f"cat rb.csv")
+    memtier_json = h1.cmd(f"cat mt.json")
+    redis_res = pandas.read_csv(io.StringIO(rb_csv), index_col=0, header=None).T.to_dict('list')
+    data = json.loads(memtier_json)
+    data = {
+        'CPU': [cpu],
+        'Memory limit [MB]': [memory],
+        'Requests per client': [data["run information"]["Requests per client"]],
+        'Total duration': [data["ALL STATS"]["Runtime"]["Total duration"]],
+        'Start time': [data["ALL STATS"]["Runtime"]["Start time"]],
+        'Ops/sec': [data["ALL STATS"]["Sets"]["Ops/sec"]],
+        'Average Latency': [data["ALL STATS"]["Sets"]["Average Latency"]],
+        'Min Latency': [data["ALL STATS"]["Sets"]["Min Latency"]],
+        'Max Latency': [data["ALL STATS"]["Sets"]["Max Latency"]],
+        'KB/sec': [data["ALL STATS"]["Sets"]["KB/sec"]],
+        **redis_res
+    }
+    for k, v in data.items():
+        final_dict[k].append(v[0])
+    net.stop()
 
 df = pandas.DataFrame.from_dict(final_dict)
 df.to_csv('result.csv', index=False, header=True)
